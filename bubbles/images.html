@@ -6,7 +6,6 @@
     <title>Bubbles Screensaver</title>
     <style>
         body, html {
-           /* background-image: url("/backgrounds/1.png"); */
             margin: 0;
             padding: 0;
             overflow: hidden;
@@ -32,10 +31,10 @@
         window.addEventListener('resize', resizeCanvas);
 
         const bubbles = [];
-        const maxBubbles = 150; // Maximum number of bubbles
+        const maxBubbles = 40; // Maximum number of bubbles
         const bubbleRadius = 70; // Size
-        const bubbleSpeed = 1.3; // Speed of the bubbles
-        const spawnInterval = 2000; // Time between spawns (milliseconds)
+        const bubbleSpeed = 1.7; // Speed of the bubbles
+        const spawnInterval = 1000; // Time between spawns (milliseconds)
         const fadeOutDuration = 5 * 1000; // 5 seconds in milliseconds
 
         let lastSpawnTime = Date.now();
