@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bubbles Screensaver</title>
+    <style>
+        body, html {
+           /* background-image: url("/backgrounds/1.png"); */
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #333; /* Dark grey background */
+        }
+        canvas {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="bubbleCanvas"></canvas>
+    
+    <script>
+        const canvas = document.getElementById('bubbleCanvas');
+        const ctx = canvas.getContext('2d');
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        const bubbles = [];
+        const maxBubbles = 150; // Maximum number of bubbles
+        const bubbleRadius = 70; // Size
+        const bubbleSpeed = 1.3; // Speed of the bubbles
+        const spawnInterval = 2000; // Time between spawns (milliseconds)
+        const fadeOutDuration = 5 * 1000; // 5 seconds in milliseconds
+
+        let lastSpawnTime = Date.now();
+        let isFadingOut = false;
+        let fadeOutStartTime = null;
+
+        // Load bubble image
+        const bubbleImage = new Image();
+        bubbleImage.src = 'bubble.png'; // Path to your image
+
+        class Bubble {
+            constructor(x, y, dx, dy, radius) {
+                this.x = x;
+                this.y = y;
+                this.dx = dx;
+                this.dy = dy;
+                this.radius = radius;
+                this.creationTime = Date.now();
+            }
+
+            draw() {
+                const diameter = this.radius * 2;
+                const age = Date.now() - this.creationTime;
+                const fadeProgress = isFadingOut
+                    ? Math.min((Date.now() - fadeOutStartTime) / fadeOutDuration, 1)
+                    : 0; // Fade progress between 0 and 1
+                
+                // Draw shadow
+                ctx.shadowColor = 'rgba(0, 0, 0, 0.5)'; // Black shadow with transparency
+                ctx.shadowBlur = 8; // Blur amount
+                ctx.shadowOffsetX = 2; // Horizontal shadow offset
+                ctx.shadowOffsetY = 2; // Vertical shadow offset
+                
+                // Set alpha for fading effect
+                ctx.globalAlpha = 1 - fadeProgress;
+
+                ctx.drawImage(bubbleImage, this.x - this.radius, this.y - this.radius, diameter, diameter);
+
+                // Reset alpha
+                ctx.globalAlpha = 1;
+            }
+
+            update() {
+                if (isFadingOut) {
+                    // Continue moving and bouncing even when fading out
+                    this.x += this.dx;
+                    this.y += this.dy;
+
+                    // Bounce off the canvas edges
+                    if (this.x - this.radius < 0) {
+                        this.x = this.radius;
+                        this.dx *= -0.9;
+                    } else if (this.x + this.radius > canvas.width) {
+                        this.x = canvas.width - this.radius;
+                        this.dx *= -0.9;
+                    }
+
+                    if (this.y - this.radius < 0) {
+                        this.y = this.radius;
+                        this.dy *= -0.9;
+                    } else if (this.y + this.radius > canvas.height) {
+                        this.y = canvas.height - this.radius;
+                        this.dy *= -0.9;
+                    }
+
+                    return Date.now() - fadeOutStartTime < fadeOutDuration;
+                } else {
+                    this.x += this.dx;
+                    this.y += this.dy;
+
+                    // Bounce off the canvas edges
+                    if (this.x - this.radius < 0) {
+                        this.x = this.radius;
+                        this.dx *= -0.9;
+                    } else if (this.x + this.radius > canvas.width) {
+                        this.x = canvas.width - this.radius;
+                        this.dx *= -0.9;
+                    }
+
+                    if (this.y - this.radius < 0) {
+                        this.y = this.radius;
+                        this.dy *= -0.9;
+                    } else if (this.y + this.radius > canvas.height) {
+                        this.y = canvas.height - this.radius;
+                        this.dy *= -0.9;
+                    }
+
+                    return true; // Keep bubble
+                }
+            }
+        }
+
+        function spawnBubble() {
+            const x = canvas.width * 0.1; // Spawn near the bottom-left corner
+            const y = canvas.height - bubbleRadius; // Adjust to the very bottom of the canvas
+            const dx = Math.random() * bubbleSpeed * 2 - bubbleSpeed;
+            const dy = Math.random() * bubbleSpeed * 2 - bubbleSpeed;
+            const radius = bubbleRadius;
+            const bubble = new Bubble(x, y, dx, dy, radius);
+
+            if (bubbles.length < maxBubbles) {
+                bubbles.push(bubble);
+            }
+        }
+
+        function updateBubbles() {
+            for (let i = bubbles.length - 1; i >= 0; i--) {
+                if (!bubbles[i].update()) {
+                    bubbles.splice(i, 1); // Remove bubble if it should be faded out
+                }
+            }
+        }
+
+        function drawBubbles() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            bubbles.forEach(bubble => bubble.draw());
+        }
+
+        function handleSpawning() {
+            if (!isFadingOut && bubbles.length >= maxBubbles) {
+                isFadingOut = true;
+                fadeOutStartTime = Date.now();
+            } else if (isFadingOut && Date.now() - fadeOutStartTime >= fadeOutDuration) {
+                bubbles.length = 0; // Clear all bubbles
+                isFadingOut = false;
+                lastSpawnTime = Date.now(); // Reset spawn timer
+            } else if (!isFadingOut && bubbles.length < maxBubbles && (Date.now() - lastSpawnTime) > spawnInterval) {
+                spawnBubble();
+                lastSpawnTime = Date.now();
+            }
+        }
+
+        function gameLoop() {
+            handleSpawning();
+            updateBubbles();
+            drawBubbles();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Run the game loop
+        gameLoop();
+    </script>
+</body>
+</html>

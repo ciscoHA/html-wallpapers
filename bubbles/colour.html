@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bubbles Screensaver</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: black;
+        }
+        canvas {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="bubbleCanvas"></canvas>
+    
+    <script>
+        const canvas = document.getElementById('bubbleCanvas');
+        const ctx = canvas.getContext('2d');
+
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        const bubbles = [];
+        const maxBubbles = 100;
+        const bubbleRadius = 60; // Increased size
+        const bubbleSpeed = 1.2;
+        const spawnInterval = 500; // Time between spawns (milliseconds)
+        const initialCollisionDelay = 3000; // Time before new bubbles start colliding (milliseconds)
+
+        let lastSpawnTime = Date.now();
+
+        class Bubble {
+            constructor(x, y, dx, dy, radius) {
+                this.x = x;
+                this.y = y;
+                this.dx = dx;
+                this.dy = dy;
+                this.radius = radius;
+                this.color = `rgba(0, 255, 0, 0.7)`; // Green for new bubbles
+                this.isNew = true;
+                this.creationTime = Date.now();
+                this.lastUpdate = Date.now();
+            }
+
+            draw() {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2, false);
+                ctx.fillStyle = this.color;
+                ctx.fill();
+                ctx.closePath();
+            }
+
+            update() {
+                this.x += this.dx;
+                this.y += this.dy;
+
+                // Bounce off the canvas edges
+                if (this.x - this.radius < 0) {
+                    this.x = this.radius;
+                    this.dx *= -0.9;
+                } else if (this.x + this.radius > canvas.width) {
+                    this.x = canvas.width - this.radius;
+                    this.dx *= -0.9;
+                }
+
+                if (this.y - this.radius < 0) {
+                    this.y = this.radius;
+                    this.dy *= -0.9;
+                } else if (this.y + this.radius > canvas.height) {
+                    this.y = canvas.height - this.radius;
+                    this.dy *= -0.9;
+                }
+
+                // Transition from new to old if conditions are met
+                if (this.isNew && Date.now() > this.creationTime + initialCollisionDelay) {
+                    if (this.checkNoCollision()) {
+                        this.isNew = false;
+                        this.color = `rgba(255, 0, 0, 0.7)`; // Red for old bubbles
+                    }
+                }
+            }
+
+            checkCollision(otherBubble) {
+                const dx = this.x - otherBubble.x;
+                const dy = this.y - otherBubble.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                return distance < this.radius + otherBubble.radius;
+            }
+
+            checkNoCollision() {
+                return !bubbles.some(otherBubble => 
+                    otherBubble !== this && this.checkCollision(otherBubble)
+                );
+            }
+
+            handleCollision(otherBubble) {
+                // Check if the bubbles should interact
+                if (this.isNew && otherBubble.isNew) return; // No interaction between new bubbles
+
+                // If one bubble is new, it should not affect the old bubble
+                if (this.isNew || otherBubble.isNew) {
+                    return;
+                }
+
+                // Handle collision response for old bubbles
+                const dx = this.x - otherBubble.x;
+                const dy = this.y - otherBubble.y;
+                const angle = Math.atan2(dy, dx);
+                const speed1 = Math.sqrt(this.dx ** 2 + this.dy ** 2);
+                const speed2 = Math.sqrt(otherBubble.dx ** 2 + otherBubble.dy ** 2);
+
+                // Calculate new velocities based on momentum
+                const newDx1 = speed2 * Math.cos(angle);
+                const newDy1 = speed2 * Math.sin(angle);
+                const newDx2 = speed1 * Math.cos(angle + Math.PI);
+                const newDy2 = speed1 * Math.sin(angle + Math.PI);
+
+                this.dx = newDx1;
+                this.dy = newDy1;
+                otherBubble.dx = newDx2;
+                otherBubble.dy = newDy2;
+            }
+        }
+
+        function spawnBubble() {
+            const x = canvas.width * 0.1; // Spawn near the bottom-left corner
+            const y = canvas.height * 0.9;
+            const dx = Math.random() * bubbleSpeed * 2 - bubbleSpeed;
+            const dy = Math.random() * bubbleSpeed * 2 - bubbleSpeed;
+            const radius = bubbleRadius;
+            const bubble = new Bubble(x, y, dx, dy, radius);
+
+            if (bubbles.length < maxBubbles) {
+                // Check if the new bubble overlaps with 4 or more existing bubbles
+                if (bubbles.filter(b => bubble.checkCollision(b)).length >= 4) {
+                    return; // Do not add this bubble
+                }
+                bubbles.push(bubble);
+            }
+        }
+
+        function updateBubbles() {
+            bubbles.forEach(bubble => bubble.update());
+
+            // Check for collisions
+            for (let i = 0; i < bubbles.length; i++) {
+                for (let j = i + 1; j < bubbles.length; j++) {
+                    const bubbleA = bubbles[i];
+                    const bubbleB = bubbles[j];
+                    if (bubbleA.checkCollision(bubbleB)) {
+                        bubbleA.handleCollision(bubbleB);
+                    }
+                }
+            }
+        }
+
+        function drawBubbles() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            bubbles.forEach(bubble => bubble.draw());
+        }
+
+        function gameLoop() {
+            const now = Date.now();
+            if (bubbles.length < maxBubbles && (now - lastSpawnTime) > spawnInterval) {
+                spawnBubble();
+                lastSpawnTime = now;
+            }
+            updateBubbles();
+            drawBubbles();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Run the game loop
+        gameLoop();
+    </script>
+</body>
+</html>
